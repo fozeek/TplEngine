@@ -1,5 +1,7 @@
 <?php
 
+namespace TplEngine;
+
 class TplEngine {
 
 	protected $file;
@@ -10,69 +12,7 @@ class TplEngine {
 	protected $filter_storage = array();
 
 	public function __construct($template, $vars = array()) {
-		$object = $this;
-		$this->tags = [
-			'for' => [
-				'pattern' => 'for '.$this->variable.' from '.$this->variable.' to '.$this->variable,
-				'replace' => function($values) use ($object) {
-					return '<?php for($'.$values[0].'='.$object->setVar($values[1]).';$'.$values[0].'<='.$object->setVar($values[2]).';$'.$values[0].'++) { ?>';
-				}
-			],
-			'endfor' => [
-				'pattern' => 'endfor',
-				'replace' => '<?php } ?>'
-			],
-			'definition' => [
-				'pattern' => 'set '.$this->variable.' = ([^}]+)',
-				'replace' => function($values) use ($object) {
-					return '<?php '.$object->setVar($values[0]).' = '.$values[1].' ?>';
-				}
-			],
-			'foreach' => [
-				'pattern' => 'for '.$this->variable.' in '.$this->variable,
-				'replace' => function($values) use ($object) {
-					return '<?php foreach('.$object->setVar($values[1]).' as '.$object->setVar($values[0]).') { ?>';
-				}
-			],
-			'filter' =>  [
-				'pattern' => 'filter:([a-z]*)',
-				'replace' => function($values) use ($object) {
-					$object->filter_storage[] = $values[0];
-					return '<?php ob_start() ?>';
-				}
-			],
-			'endfilter' =>  [
-				'pattern' => 'endfilter',
-				'replace' => function($values) use ($object) {
-					$function = end($object->filter_storage);
-					$object->filter_storage = array_pop($object->filter_storage);
-					return '<?= '.$function.'(ob_get_clean()) ?>';
-				}
-			],
-			'variable' =>  [
-				'pattern' => $this->variable,
-				'replace' => function($values) use ($object) {
-					return '<?= '.$object->setVar($values[0]).' ?>';
-				}
-			],
-			'function' =>  [
-				'pattern' => '([a-zA-Z]+)[ ]{0,1}\(([^}]+)\)',
-				'replace' => function($values) use ($object) {
-					$vars = explode(',', $values[1]);
-					$vars = array_map('trim', $vars);
-					$vars = array_map([$object, 'setVar'], $vars);
-					return '<?php /* '.$values[0].'('.implode(', ', $vars).') */  ?>';
-				}
-			],
-			'helper' =>  [
-				'pattern' => 'helper:'.$this->variable.' ([^}]+)',
-				'replace' => function($values) use ($object) {
-					$vars = explode(' ', $values[1]);
-					$vars = array_map([$object, 'setVar'], array_filter($vars));
-					return '<?php /* $this->helper("'.ucfirst($values[0]).'", ['.implode(', ', $vars).']) */ ?>';
-				}
-			],
-		];
+		$this->bootstrap();
 		$this->file = file_get_contents($template);
 		$this->compileFile();
 		$this->generateView();
@@ -137,5 +77,69 @@ class TplEngine {
 		}
 	}
 
+	protected function bootstrap() {
+		$this->tags = [
+			'for' => [
+				'pattern' => 'for '.$this->variable.' from '.$this->variable.' to '.$this->variable,
+				'replace' => function($values) {
+					return '<?php for($'.$values[0].'='.$this->setVar($values[1]).';$'.$values[0].'<='.$this->setVar($values[2]).';$'.$values[0].'++) { ?>';
+				}
+			],
+			'endfor' => [
+				'pattern' => 'endfor',
+				'replace' => '<?php } ?>'
+			],
+			'definition' => [
+				'pattern' => 'set '.$this->variable.' = ([^}]+)',
+				'replace' => function($values) {
+					return '<?php '.$this->setVar($values[0]).' = '.$values[1].' ?>';
+				}
+			],
+			'foreach' => [
+				'pattern' => 'for '.$this->variable.' in '.$this->variable,
+				'replace' => function($values) {
+					return '<?php foreach('.$this->setVar($values[1]).' as '.$this->setVar($values[0]).') { ?>';
+				}
+			],
+			'filter' =>  [
+				'pattern' => 'filter:([a-z]*)',
+				'replace' => function($values) {
+					$this->filter_storage[] = $values[0];
+					return '<?php ob_start() ?>';
+				}
+			],
+			'endfilter' =>  [
+				'pattern' => 'endfilter',
+				'replace' => function($values) {
+					$function = end($this->filter_storage);
+					$this->filter_storage = array_pop($this->filter_storage);
+					return '<?= '.$function.'(ob_get_clean()) ?>';
+				}
+			],
+			'variable' =>  [
+				'pattern' => $this->variable,
+				'replace' => function($values) {
+					return '<?= '.$this->setVar($values[0]).' ?>';
+				}
+			],
+			'function' =>  [
+				'pattern' => '([a-zA-Z]+)[ ]{0,1}\(([^}]+)\)',
+				'replace' => function($values) {
+					$vars = explode(',', $values[1]);
+					$vars = array_map('trim', $vars);
+					$vars = array_map([$this, 'setVar'], $vars);
+					return '<?php /* '.$values[0].'('.implode(', ', $vars).') */  ?>';
+				}
+			],
+			'helper' =>  [
+				'pattern' => 'helper:'.$this->variable.' ([^}]+)',
+				'replace' => function($values) {
+					$vars = explode(' ', $values[1]);
+					$vars = array_map([$this, 'setVar'], array_filter($vars));
+					return '<?php /* $this->helper("'.ucfirst($values[0]).'", ['.implode(', ', $vars).']) */ ?>';
+				}
+			],
+		];
+	}
 
 }
