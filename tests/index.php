@@ -2,12 +2,12 @@
 
 require '../vendor/autoload.php';
 
-$engine = new TplEngine\TplEngine('template.tpl');
+$engine = TplEngine\TplEngine::fromFile('template.tpl');
 ?>
 
 <div style="padding: 10px;margin: 20px;border: 1px solid black;">
 	<pre>
-		<?= htmlspecialchars($engine->getCompiledFile()) ?>
+		<?= htmlspecialchars($engine->getCompiledTemplate()) ?>
 	</pre>
 </div>
 

@@ -4,28 +4,30 @@ namespace TplEngine;
 
 class TplEngine {
 
-    protected $file;
-    protected $compiledFile;
+    protected $template;
+    protected $compiledTemplate;
     protected $view;
     protected $tags;
     protected $variable = '([a-zA-Z0-9\."]*)';
-    protected $filter_storage = array();
 
-    public function __construct($template, $vars = array()) {
+    private function __construct($template, $vars = array()) {
         $this->bootstrap();
-        $this->file = file_get_contents($template);
-        $this->compileFile();
-        $this->generateView();
+        $this->template = $template;
+        $this->compileTemplate();
     }
 
-    public function render() {
-        return $this->view;
+    public static function fromFile($template, $vars = array()) {
+        return new self(file_get_contents($template), $vars);
     }
 
-    protected function generateView() {
+    public static function fromText($template, $vars = array()) {
+        return new self($template, $vars);
+    }
+
+    public function render($vars = array()) {
         ob_start();
-        eval(" ?>".$this->compiledFile."<?php ");
-        $this->view = ob_get_clean();
+        eval(" ?>".$this->compiledTemplate."<?php ");
+        return ob_get_clean();
     }
 
     protected function setVar($var) {
@@ -48,15 +50,15 @@ class TplEngine {
         return $var;
     }
 
-    public function getCompiledFile() {
-        return $this->compiledFile;
+    public function getCompiledTemplate() {
+        return $this->compiledTemplate;
     }
 
-    public function compileFile() {
-        $this->compiledFile = $this->file;
+    public function compileTemplate() {
+        $this->compiledTemplate = $this->template;
         foreach ($this->tags as $tag) {
             $matches = array();
-            $return = preg_match_all('#{{[ ]?'.$tag['pattern'].'[ ]?}}#', $this->compiledFile, $matches);
+            $return = preg_match_all('#{{[ ]?'.$tag['pattern'].'[ ]?}}#', $this->compiledTemplate, $matches);
             $count = count($matches[0]);
 
             $count_replace = count($matches)-1;
@@ -76,7 +78,7 @@ class TplEngine {
                     $tag_replace = $tag_replace($data);
                 }
 
-                $this->compiledFile = str_replace($matches[0][$cpt], $tag_replace, $this->compiledFile);
+                $this->compiledTemplate = str_replace($matches[0][$cpt], $tag_replace, $this->compiledTemplate);
             }
         }
     }
@@ -106,20 +108,24 @@ class TplEngine {
                 }
             ],
             'filter' =>  [
-                'pattern' => 'filter:([a-z]*)',
+                'pattern' => 'filter:([a-z]*)[ ]?}}(([^e]|e[^n]|en[^d]|end[^f]|endf[^i]|endfi[^l]|endfil[^t]|endfilt[^e]|endfilte[^r])+){{[ ]?endfilter',
                 'replace' => function($values) {
-                    $this->filter_storage[] = $values[0];
-                    return '<?php ob_start() ?>';
+                    $filter = $values[0];
+                    $content = self::fromText($values[1])->getCompiledTemplate();
+                    return '<?php ob_start() ?>'.$content.'<?= '.$filter.'(ob_get_clean())?>';
                 }
             ],
-            'endfilter' =>  [
-                'pattern' => 'endfilter',
-                'replace' => function($values) {
-                    $function = end($this->filter_storage);
-                    $this->filter_storage = array_pop($this->filter_storage);
-                    return '<?= /*$this->filter...*/'.$function.'(ob_get_clean()) ?>';
-                }
-            ],
+            // 'endfilter' =>  [
+            //     'pattern' => 'endfilter',
+            //     'replace' => function($values) {
+            //         echo 'CLOSE_STORAGE : ';var_dump($this->filter_storage);echo '<br />';echo '<br />';
+            //         $function = end($this->filter_storage);
+            //         echo 'CLOSE_FUNCTION : ';var_dump($function);echo '<br />';echo '<br />';
+            //         $this->filter_storage = array_pop($this->filter_storage);
+            //         echo 'CLOSE_END_STORAGE : ';var_dump($this->filter_storage);echo '<br />';echo '<br />';
+            //         return '<?= /*$this->filter...*/'.$function.'(ob_get_clean()) ';
+            //     }
+            // ],
             'function' =>  [
                 'pattern' => '([a-zA-Z_]+)[ ]?\(([^}]+)\)',
                 'replace' => function($values) {
@@ -145,14 +151,14 @@ class TplEngine {
                     $args = explode(', ', $values[1]);
                     $args = array_map([$this, 'setVar'], array_filter($args));
 
-                    $content = $values[2];
+                    $content = self::fromText($values[2])->getCompiledTemplate();
 
-                    preg_replace_callback('#{{[ ]?'.$this->variable.'[ ]?}}#', function($matches) use (&$content) {
-                        $content = str_replace($matches[0], '".'.$this->setVar($matches[1]).'."', $content);
-                    }, $content);
+                    // preg_replace_callback('#{{[ ]?'.$this->variable.'[ ]?}}#', function($matches) use (&$content) {
+                    //     $content = str_replace($matches[0], '".'.$this->setVar($matches[1]).'."', $content);
+                    // }, $content);
 
 
-                    return '<?php function '.$function.'('.implode(', ', $args).') { return "'.trim($content).'"; } ?>';
+                    return '<?php function '.$function.'('.implode(', ', $args).') { ?> '.trim($content).' <?php } ?>';
                 }
             ],
             'variable' =>  [

@@ -7,7 +7,7 @@
 ] }}
 
 {{ macro uneMacro_de_ouf(test, testou) }}
-	{{test}} de {{testou}}
+	{{test}} de {{ filter:strtoupper }}{{testou}}{{ endfilter }}
 {{ endmacro }}
 
 {{ set array.3 = [
