@@ -12,5 +12,5 @@ $engine = TplEngine\TplEngine::fromFile('template.tpl');
 </div>
 
 <div style="padding: 10px;margin: 20px;border: 1px solid black;">
-	<?= $engine->render() ?>
+	<?= $engine->render(['myVar' => 'Test']) ?>
 </div>

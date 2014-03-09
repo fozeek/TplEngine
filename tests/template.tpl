@@ -1,3 +1,5 @@
+{{ myVar }}
+
 {{ set lol = 4 }}
 
 {{ set array = [

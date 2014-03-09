@@ -26,6 +26,7 @@ class TplEngine {
 
     public function render($vars = array()) {
         ob_start();
+        extract($vars);
         eval(" ?>".$this->compiledTemplate."<?php ");
         return ob_get_clean();
     }
@@ -112,20 +113,9 @@ class TplEngine {
                 'replace' => function($values) {
                     $filter = $values[0];
                     $content = self::fromText($values[1])->getCompiledTemplate();
-                    return '<?php ob_start() ?>'.$content.'<?= '.$filter.'(ob_get_clean())?>';
+                    return '<?php ob_start() ?>'.$content.'<?= '.$filter.'(ob_get_clean()) ?>';
                 }
             ],
-            // 'endfilter' =>  [
-            //     'pattern' => 'endfilter',
-            //     'replace' => function($values) {
-            //         echo 'CLOSE_STORAGE : ';var_dump($this->filter_storage);echo '<br />';echo '<br />';
-            //         $function = end($this->filter_storage);
-            //         echo 'CLOSE_FUNCTION : ';var_dump($function);echo '<br />';echo '<br />';
-            //         $this->filter_storage = array_pop($this->filter_storage);
-            //         echo 'CLOSE_END_STORAGE : ';var_dump($this->filter_storage);echo '<br />';echo '<br />';
-            //         return '<?= /*$this->filter...*/'.$function.'(ob_get_clean()) ';
-            //     }
-            // ],
             'function' =>  [
                 'pattern' => '([a-zA-Z_]+)[ ]?\(([^}]+)\)',
                 'replace' => function($values) {
