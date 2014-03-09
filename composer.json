@@ -1,0 +1,21 @@
+{
+    "name": "fozeek/tplengine",
+    "description": "The Fozeek Framework.",
+    "keywords": ["template", "engine", "fk"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Quentin Deneuve",
+            "email": "quentin.deneuve@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0"
+    },
+    "autoload": {
+        "psr-0": {
+            "TplEngine": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
