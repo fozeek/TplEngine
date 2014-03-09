@@ -6,7 +6,7 @@
 	['id' => 3, 'name' => 'Gtuenmorgen']
 ] }}
 
-{{ macro uneMacro_de_ouf(test, testou)}}
+{{ macro uneMacro_de_ouf(test, testou) }}
 	{{test}} de {{testou}}
 {{ endmacro }}
 
