@@ -6,6 +6,10 @@
 	['id' => 3, 'name' => 'Gtuenmorgen']
 ] }}
 
+{{ macro uneMacro_de_ouf(test, testou)}}
+	{{test}} de {{testou}}
+{{ endmacro }}
+
 {{ set array.3 = [
 	1,
 	2,12,
@@ -15,7 +19,8 @@
 	LOLILOL
 {{ endfilter }}
 
-{{ doIt("LOL i lol", pouet) }}
+
+{{ uneMacro_de_ouf("putin", "ouf") }}
 
 {{ list|join(', ') }}
 

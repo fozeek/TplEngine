@@ -4,12 +4,20 @@ namespace TplEngine;
 
 class TplEngine {
 
+	/*
+
+		A voir : preg_replace_callback
+
+
+	*/
+
 	protected $file;
 	protected $compiledFile;
 	protected $view;
 	protected $tags;
 	protected $variable = '([a-zA-Z0-9\."]*)';
 	protected $filter_storage = array();
+	protected $macros = array();
 
 	public function __construct($template, $vars = array()) {
 		$this->bootstrap();
@@ -48,11 +56,15 @@ class TplEngine {
 		return $var;
 	}
 
+	public function getCompiledFile() {
+		return $this->compiledFile;
+	}
+
 	public function compileFile() {
 		$this->compiledFile = $this->file;
 		foreach ($this->tags as $tag) {
 			$matches = array();
-			$return = preg_match_all('#{{[ ]{0,1}'.$tag['pattern'].'[ ]{0,1}}}#', $this->compiledFile, $matches);
+			$return = preg_match_all('#{{[ ]?'.$tag['pattern'].'[ ]?}}#', $this->compiledFile, $matches);
 			$count = count($matches[0]);
 
 			$count_replace = count($matches)-1;
@@ -113,22 +125,16 @@ class TplEngine {
 				'replace' => function($values) {
 					$function = end($this->filter_storage);
 					$this->filter_storage = array_pop($this->filter_storage);
-					return '<?= '.$function.'(ob_get_clean()) ?>';
-				}
-			],
-			'variable' =>  [
-				'pattern' => $this->variable,
-				'replace' => function($values) {
-					return '<?= '.$this->setVar($values[0]).' ?>';
+					return '<?= /*$this->filter...*/'.$function.'(ob_get_clean()) ?>';
 				}
 			],
 			'function' =>  [
-				'pattern' => '([a-zA-Z]+)[ ]{0,1}\(([^}]+)\)',
+				'pattern' => '([a-zA-Z_]+)[ ]?\(([^}]+)\)',
 				'replace' => function($values) {
 					$vars = explode(',', $values[1]);
 					$vars = array_map('trim', $vars);
 					$vars = array_map([$this, 'setVar'], $vars);
-					return '<?php /* '.$values[0].'('.implode(', ', $vars).') */  ?>';
+					return '<?= /* $this-> */ '.$values[0].'('.implode(', ', $vars).')  ?>';
 				}
 			],
 			'helper' =>  [
@@ -137,6 +143,30 @@ class TplEngine {
 					$vars = explode(' ', $values[1]);
 					$vars = array_map([$this, 'setVar'], array_filter($vars));
 					return '<?php /* $this->helper("'.ucfirst($values[0]).'", ['.implode(', ', $vars).']) */ ?>';
+				}
+			],
+			'macro' =>  [
+				'pattern' => 'macro ([a-zA-Z\_]+)[ ]?\((([a-zA-Z0-9\."]*[, ]?)*)\)[ ]?}}(([^e]|e[^n]|en[^d]|end[^m]|endm[^a]|endma[^c]|endmac[^r]|endmacr[^o])+){{[ ]?endmacro',
+				'replace' => function($values) {
+					$values = array_values(array_filter($values));
+					$function = ucfirst($values[0]);
+					$args = explode(', ', $values[1]);
+					$args = array_map([$this, 'setVar'], array_filter($args));
+
+					$content = $values[2];
+
+					preg_replace_callback('#{{[ ]?'.$this->variable.'[ ]?}}#', function($matches) use (&$content) {
+						$content = str_replace($matches[0], '".'.$this->setVar($matches[1]).'."', $content);
+					}, $content);
+
+
+					return '<?php function '.$function.'('.implode(', ', $args).') { return "'.trim($content).'"; } ?>';
+				}
+			],
+			'variable' =>  [
+				'pattern' => $this->variable,
+				'replace' => function($values) {
+					return '<?= '.$this->setVar($values[0]).' ?>';
 				}
 			],
 		];
